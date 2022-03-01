@@ -55,14 +55,41 @@
         <div class="container">
             <div class="swiper">
                 <div class="swiper-list">
-                    <a class="swiper-item" v-for="i in swiperList">{{ i }}</a>
+                    <a
+                        class="swiper-item"
+                        v-for="(src, i) in swiperList"
+                        :style="{ backgroundImage: 'url(' + src + ')' }"
+                    >{{ i }}</a>
                 </div>
-                <div class="swiper-prev" @click="swiperPrev">
+                <div class="swiper-prev" v-if="swiperCurrent > 0" @click="swiperPrevHandle">
                     <i class="i i-shangyige"></i>
                 </div>
-                <div class="swiper-next" @click="swiperNext">
+                <div
+                    class="swiper-next"
+                    v-if="swiperCurrent < swiperList.length - 1"
+                    @click="swiperNextHandle"
+                >
                     <i class="i i-xiayige"></i>
                 </div>
+                <ul class="swiper-current">
+                    <li
+                        class="current-item"
+                        v-for="(src, i) in swiperList"
+                        :class="{ 'active': i === swiperCurrent || (swiperCurrent === 3 && i === 0) }"
+                    >
+                        <span @click="swiperCurrentHandle(i)">
+                            <svg
+                                xmlns="http://www.w3.org/200/svg"
+                                height="100%"
+                                width="100%"
+                                viewBox="0 0 14 14"
+                                preserveAspectRatio="none"
+                            >
+                                <circle cx="7" cy="7" r="6" />
+                            </svg>
+                        </span>
+                    </li>
+                </ul>
             </div>
             <div class="collection-entry"></div>
         </div>
@@ -70,34 +97,62 @@
 </template>
     
 <script setup lang='ts'>
-import { computed, defineComponent, ref } from "vue";
-import { useStore } from "@/store/index";
+import { computed, onMounted, ref } from "vue"
+import { useStore } from "@/store/index"
 
-const swiperList = [1, 2, 3]
-let swiperCurrent = 0
+const swiperList = ref(['https://image.gcores.com/6fc2c160-af22-448b-8f00-b36c18a40798.jpg?x-oss-process=image/resize,limit_1,m_fill,w_750,h_420/quality,q_90', 'https://image.gcores.com/8abea6c3-740f-46a2-8afb-87c8502c300c.jpg?x-oss-process=image/resize,limit_1,m_fill,w_750,h_420/quality,q_90', 'https://image.gcores.com/259fbc72-5d83-48f3-b854-044571d48695.jpg?x-oss-process=image/resize,limit_1,m_fill,w_750,h_420/quality,q_90'])
+let swiperCurrent = ref(1)
 const store = useStore()
+
+let swiperListDom: HTMLElement
+let swiperListFirstDom: HTMLElement
+let swiperStartFuc: NodeJS.Timer
+
 const username = computed(() => {
     return store.state.user.username
 })
 
-const swiperListDom = <HTMLElement>document.querySelector(".swiper .swiper-list")
-const swiperPrev = () => {
-    console.log(swiperListDom)
-    if (swiperCurrent > 0) swiperListDom.style.transform = `translate(-${swiperCurrent--}00%);`
-}
+onMounted(() => {
+    swiperListDom = <HTMLElement>document.querySelector(".swiper .swiper-list")
+    swiperListFirstDom = <HTMLElement>document.querySelector(".swiper .swiper-list .swiper-item:first-child")
 
-const swiperNext = () => {
-    console.log(swiperListDom)
-    if (swiperCurrent < swiperList.length - 1) swiperListDom!.style.transform = `translate(-${swiperCurrent++}00%);`
-}
-
-const home = defineComponent({
-    data() {
-        return {
-
-        }
-    },
+    if (swiperListDom.hasChildNodes()) swiperListDom.appendChild((swiperListFirstDom.cloneNode()))
+    swiperStartFuc = setInterval(swiperNextHandle, 2000) /** 组件消失时应该销毁 */
 })
+
+const swiperPrevHandle = (): void => {
+    console.log('prev')
+    if (swiperCurrent.value > 0) swiperListDom.setAttribute('style', `transform:translate(-${--swiperCurrent.value}00%);`)
+}
+
+const swiperNextHandle = () => {
+    if (swiperCurrent.value <= swiperList.value.length) {
+        swiperListDom.setAttribute('style', `transform:translate(-${++swiperCurrent.value}00%);transition-duration: 1s;`)
+    }
+    if (swiperCurrent.value === swiperList.value.length + 1) {
+        swiperListDom.setAttribute('style', `transform:translate(0);transition-duration: 0s;`)
+        swiperCurrent.value = 0
+
+        setTimeout(() => {
+            /**
+             * 必须延时才做下一步，等带浏览器把盒子移到0位置
+             */
+            swiperNextHandle()
+        }, 100)
+    }
+}
+/**
+ * @description 跑马灯跳到当前的位置
+ * @param current 当前的index
+ */
+const swiperCurrentHandle = (current: number) => {
+    if (0 <= current && current < swiperList.value.length) {
+        swiperListDom.setAttribute('style', `transform:translate(-${current}00%);`)
+        swiperCurrent.value = current
+    }
+}
+
+
 </script>
     
 <style lang="scss" scoped>
@@ -174,15 +229,15 @@ const home = defineComponent({
             height: $swiper-height;
             border-radius: 4px;
             overflow: hidden;
-
             &-list {
                 display: flex;
                 height: 100%;
                 overflow: visible;
                 $bg-color: #00fdfb, #ffd200, #fb5911, #2cf698, #5da6fb, #d75efb,
                     #9fff10;
-
-                @for $i from 1 through 3 {
+                transform: translate(0);
+                transition-property: transform;
+                @for $i from 1 through 4 {
                     $item: nth($bg-color, $i);
                     .swiper-item:nth-child(#{$i}) {
                         flex: none;
@@ -220,6 +275,70 @@ const home = defineComponent({
             &:hover .swiper-prev,
             &:hover .swiper-next {
                 opacity: 1;
+            }
+
+            .swiper-current {
+                position: absolute;
+                left: 0;
+                bottom: 0;
+                display: flex;
+                justify-content: center;
+                width: 100%;
+                height: 40px;
+                .current-item {
+                    position: relative;
+                    display: inline-block;
+                    margin: 0 8px;
+                    width: 16px;
+                    height: 16px;
+                    line-height: 1;
+                    cursor: pointer;
+                    span {
+                        display: inline-block;
+                        margin: 5px;
+                        width: 6px;
+                        height: 6px;
+                        background: #fff;
+                        border-radius: 50%;
+
+                        svg {
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            outline: none;
+                            border-radius: 50%;
+                            text-indent: -999em;
+                            cursor: pointer;
+
+                            circle {
+                                opacity: 0;
+                                fill: none;
+                                stroke: #fff;
+                                stroke-width: 2;
+                                stroke-linecap: round;
+                                stroke-linejoin: round;
+                                stroke-dasharray: 36 36;
+                                stroke-dashoffset: 36;
+                                transition: stroke-dashoffset 0.3s, opacity 0.3s;
+                            }
+                        }
+                    }
+
+                    &.active {
+                        span {
+                            svg {
+                                circle {
+                                    opacity: 1;
+                                    stroke-dashoffset: 0;
+                                    transition: stroke-dashoffset 0.3s,
+                                        opacity 0.15s;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
