@@ -10,7 +10,7 @@ export const store:Module<userState,RootState> = {
         username:"joel"
     }),
     mutations:{
-        increment(state:userState,newValue:string):void {
+        ['SET_USERNAME'](state:userState,newValue:string):void {
             state.username = newValue 
         }
     }

@@ -12,9 +12,12 @@ export const store: Module<themeState, RootState> = {
     state: (): themeState => ({
         headerColor: "#fff",
     }),
+    actions:{
+        
+    },
     mutations:{
-        increment(state: themeState, newValue: string): void {
+        ['SET_HEADERCOLOR'](state: themeState, newValue: string): void {
             state.headerColor = newValue
-        }
+        },
     }
 }
